@@ -4,6 +4,8 @@ export interface User {
   displayName: string;
   familyId: string;
   role: 'admin' | 'member';
+  quiz_score?: number;
+  quiz_streak?: number;
   createdAt: Date;
 }
 
@@ -54,7 +56,27 @@ export interface Notification {
   familyId: string;
   title: string;
   message: string;
-  type: 'announcement' | 'media' | 'general';
+  type: 'announcement' | 'media' | 'general' | 'quiz';
   isRead: boolean;
+  createdAt: Date;
+}
+
+export interface QuizQuestion {
+  id: string;
+  question: string;
+  correctAnswer: string;
+  options: string[];
+  difficulty: 'easy' | 'medium' | 'hard';
+  bibleReference: string;
+}
+
+export interface QuizAttempt {
+  id: string;
+  userId: string;
+  familyId: string;
+  questionId: string;
+  userAnswer: string;
+  isCorrect: boolean;
+  pointsEarned: number;
   createdAt: Date;
 }

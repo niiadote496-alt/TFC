@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Family } from '../types';
-import { getFamilies } from '../lib/firestore';
-import { initializeFamilies } from '../lib/initializeData';
+import { getFamilies } from '../lib/api';
 import { Users, ArrowRight, Plus } from 'lucide-react';
 
 export default function FamilySelection() {
@@ -14,10 +13,6 @@ export default function FamilySelection() {
   useEffect(() => {
     const loadFamilies = async () => {
       try {
-        // Initialize families if they don't exist
-        await initializeFamilies();
-        
-        // Fetch families from Firestore
         const familiesData = await getFamilies();
         setFamilies(familiesData);
       } catch (error) {
@@ -38,17 +33,17 @@ export default function FamilySelection() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50 flex items-center justify-center p-4">
       <div className="max-w-4xl w-full">
         <div className="text-center mb-12">
-          <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl mx-auto mb-6 flex items-center justify-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl mx-auto mb-6 flex items-center justify-center">
             <Users className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Choose Your Family</h1>
@@ -64,7 +59,7 @@ export default function FamilySelection() {
               onClick={() => setSelectedFamily(family.id)}
               className={`relative cursor-pointer rounded-2xl p-6 transition-all duration-300 ${
                 selectedFamily === family.id
-                  ? 'bg-gradient-to-br from-purple-600 to-blue-600 text-white scale-105 shadow-2xl'
+                  ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white scale-105 shadow-2xl'
                   : 'bg-white hover:bg-gray-50 shadow-lg hover:shadow-xl'
               }`}
             >
@@ -72,7 +67,7 @@ export default function FamilySelection() {
                 <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${
                   selectedFamily === family.id
                     ? 'bg-white/20'
-                    : 'bg-gradient-to-br from-purple-600 to-blue-600'
+                    : 'bg-gradient-to-br from-blue-600 to-blue-700'
                 }`}>
                   <Users className={`w-8 h-8 ${
                     selectedFamily === family.id ? 'text-white' : 'text-white'
@@ -105,7 +100,7 @@ export default function FamilySelection() {
           <button
             onClick={handleJoinFamily}
             disabled={!selectedFamily}
-            className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed space-x-2"
+            className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed space-x-2"
           >
             <span>Join Family</span>
             <ArrowRight className="w-5 h-5" />
@@ -114,7 +109,7 @@ export default function FamilySelection() {
 
         <div className="text-center mt-8">
           <p className="text-gray-600 mb-4">Don't see your family?</p>
-          <button className="inline-flex items-center text-purple-600 hover:text-purple-700 font-medium space-x-2">
+          <button className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium space-x-2">
             <Plus className="w-4 h-4" />
             <span>Request New Family</span>
           </button>

@@ -1,17 +1,11 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { 
-  User as FirebaseUser,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged
-} from 'firebase/auth';
-import { auth } from '../lib/firebase';
-import { getUserProfile, createUserProfile, updateUserFamily as firestoreUpdateUserFamily, subscribeToUserProfile } from '../lib/firestore';
+import { supabase } from '../lib/supabase';
 import { User } from '../types';
+import { getUserProfile, createUserProfile, updateUserFamily, subscribeToUserProfile } from '../lib/api';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface AuthContextType {
-  currentUser: FirebaseUser | null;
+  currentUser: SupabaseUser | null;
   userData: User | null;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, displayName: string) => Promise<void>;
@@ -32,31 +26,40 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null);
   const [userData, setUserData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   async function signup(email: string, password: string, displayName: string) {
-    const { user } = await createUserWithEmailAndPassword(auth, email, password);
-    
-    // Create user profile in Firestore
-    const newUserData: Omit<User, 'id' | 'createdAt'> = {
-      email: user.email!,
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (error) throw error;
+    if (!data.user) throw new Error('Failed to create user');
+
+    await createUserProfile(data.user.id, {
+      email: data.user.email!,
       displayName,
-      familyId: '', // Will be set when user selects family
-      role: 'member'
-    };
-    
-    await createUserProfile(user.uid, newUserData);
+      familyId: '',
+      role: 'member',
+    });
   }
 
   async function login(email: string, password: string) {
-    await signInWithEmailAndPassword(auth, email, password);
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) throw error;
   }
 
   async function logout() {
     setUserData(null);
-    await signOut(auth);
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
   }
 
   function updateUserData(data: Partial<User>) {
@@ -65,28 +68,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  async function updateUserFamily(familyId: string) {
+  async function handleUpdateUserFamily(familyId: string) {
     if (currentUser) {
-      await firestoreUpdateUserFamily(currentUser.uid, familyId);
-      // The real-time listener will update the userData automatically
+      await updateUserFamily(currentUser.id, familyId);
     }
   }
 
   useEffect(() => {
     let unsubscribeFromUserProfile: (() => void) | null = null;
-    
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user);
-      
-      // Clean up previous user profile subscription
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setCurrentUser(session?.user ?? null);
+
+      if (session?.user) {
+        unsubscribeFromUserProfile = subscribeToUserProfile(session.user.id, (profile) => {
+          setUserData(profile);
+          setLoading(false);
+        });
+      } else {
+        setLoading(false);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCurrentUser(session?.user ?? null);
+
       if (unsubscribeFromUserProfile) {
         unsubscribeFromUserProfile();
         unsubscribeFromUserProfile = null;
       }
-      
-      if (user) {
-        // Subscribe to real-time user profile updates
-        unsubscribeFromUserProfile = subscribeToUserProfile(user.uid, (profile) => {
+
+      if (session?.user) {
+        unsubscribeFromUserProfile = subscribeToUserProfile(session.user.id, (profile) => {
           setUserData(profile);
           setLoading(false);
         });
@@ -97,7 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
-      unsubscribe();
+      subscription.unsubscribe();
       if (unsubscribeFromUserProfile) {
         unsubscribeFromUserProfile();
       }
@@ -112,7 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     loading,
     updateUserData,
-    updateUserFamily
+    updateUserFamily: handleUpdateUserFamily,
   };
 
   return (
