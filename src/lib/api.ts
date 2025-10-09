@@ -419,7 +419,10 @@ export function subscribeToUserProfile(userId: string, callback: (user: User | n
     })
     .subscribe();
 
-  getUserProfile(userId).then(callback);
+  getUserProfile(userId).then(callback).catch((error) => {
+    console.error('Error loading user profile:', error);
+    callback(null);
+  });
 
   return () => {
     supabase.removeChannel(channel);
